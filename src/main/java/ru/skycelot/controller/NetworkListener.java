@@ -10,22 +10,22 @@ import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.nio.charset.StandardCharsets;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 public class NetworkListener {
 
     private final ByteBuffer buffer = ByteBuffer.allocate(64 * 1024);
     private final Selector selector;
-    private final FrontController frontController;
-    private final Map<SocketAddress, ByteBuffer> requests = new HashMap<>();
+    private final RequestsExecutor requestsExecutor;
+    private final Map<SocketAddress, SocketChannel> clients = new HashMap<>();
+    private final Map<SocketAddress, ByteArrayOutputStream> requests = new HashMap<>();
+    private final Queue<Response> newResponses;
     private final Map<SocketAddress, ByteBuffer> responses = new HashMap<>();
 
-    public NetworkListener(Selector selector, FrontController frontController) {
+    public NetworkListener(Selector selector, Queue<Response> newResponses, RequestsExecutor requestsExecutor) {
         this.selector = selector;
-        this.frontController = frontController;
+        this.requestsExecutor = requestsExecutor;
+        this.newResponses = newResponses;
     }
 
     public void service() throws IOException {
@@ -47,30 +47,42 @@ public class NetworkListener {
                     System.out.println("Got a client connection");
                 } else if (key.isReadable()) {
                     SocketChannel channel = (SocketChannel) key.channel();
+                    clients.put(channel.getRemoteAddress(), channel);
                     buffer.clear();
                     int readBytes = channel.read(buffer);
                     buffer.flip();
-                    ByteArrayOutputStream data = new ByteArrayOutputStream();
+                    ByteArrayOutputStream data = requests.computeIfAbsent(channel.getRemoteAddress(), (address) -> new ByteArrayOutputStream());
                     while (buffer.hasRemaining()) {
                         data.write(buffer.get());
                     }
                     String text = new String(data.toByteArray(), StandardCharsets.UTF_8);
-                    System.out.println("Request size: " + readBytes);
-                    System.out.println("Request text: " + text);
-                    channel.register(selector, SelectionKey.OP_WRITE);
+                    if (requestsExecutor.isRequestCompleted(text)) {
+                        requests.remove(channel.getRemoteAddress());
+                        requestsExecutor.requestData(channel.getRemoteAddress(), text);
+                        System.out.println("Request size: " + data.size());
+                        System.out.println("Request: " + text);
+                    } else {
+                        requests.put(channel.getRemoteAddress(), data);
+                        System.out.println("Request part with size: " + readBytes);
+                    }
                 } else if (key.isWritable()) {
                     SocketChannel channel = (SocketChannel) key.channel();
-                    buffer.clear();
-                    byte[] data = "HTTP/1.0 200 OK".getBytes(StandardCharsets.UTF_8);
-                    for (int offset = 0; offset < data.length; offset++) {
-                        buffer.put(data[offset]);
-                    }
-                    buffer.flip();
-                    int writtenBytes = channel.write(buffer);
+                    ByteBuffer responseBuffer = responses.get(channel.getRemoteAddress());
+                    int writtenBytes = channel.write(responseBuffer);
                     System.out.println("Response size: " + writtenBytes);
-                    channel.close();
+                    if (!responseBuffer.hasRemaining()) {
+                        responses.remove(channel.getRemoteAddress());
+                        channel.close();
+                    }
                 }
                 keysIterator.remove();
+            }
+
+            Response response;
+            while ((response = newResponses.poll()) != null) {
+                responses.put(response.getClient(), response.getData());
+                SocketChannel channel = clients.get(response.getClient());
+                channel.register(selector, SelectionKey.OP_WRITE);
             }
         }
     }
