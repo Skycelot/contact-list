@@ -1,23 +1,22 @@
 package ru.skycelot.controller;
 
 import java.net.SocketAddress;
-import java.nio.ByteBuffer;
 
 public class Response {
 
     private final SocketAddress client;
-    private final ByteBuffer data;
+    private final String text;
 
-    public Response(SocketAddress client, ByteBuffer data) {
+    public Response(SocketAddress client, String text) {
         this.client = client;
-        this.data = data;
+        this.text = text;
     }
 
     public SocketAddress getClient() {
         return client;
     }
 
-    public ByteBuffer getData() {
-        return data;
+    public String getText() {
+        return text;
     }
 }

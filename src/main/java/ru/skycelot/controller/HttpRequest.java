@@ -7,8 +7,7 @@ public class HttpRequest {
 
     private String method;
     private String path;
-    private final Map<String, String> headers = new HashMap<>();
-    private String body;
+    private final Map<String, String> parameters = new HashMap<>();
 
     public String getMethod() {
         return method;
@@ -26,15 +25,7 @@ public class HttpRequest {
         this.path = path;
     }
 
-    public Map<String, String> getHeaders() {
-        return headers;
-    }
-
-    public String getBody() {
-        return body;
-    }
-
-    public void setBody(String body) {
-        this.body = body;
+    public Map<String, String> getParameters() {
+        return parameters;
     }
 }

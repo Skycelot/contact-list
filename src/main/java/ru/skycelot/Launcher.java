@@ -18,7 +18,7 @@ public class Launcher {
         Selector selector = Selector.open();
         Queue<Response> responses = new LinkedBlockingQueue<>();
         FrontController frontController = new FrontController();
-        RequestsExecutor requestsExecutor = new RequestsExecutor(Executors.newFixedThreadPool(10), selector, responses);
+        RequestsExecutor requestsExecutor = new RequestsExecutor(Executors.newFixedThreadPool(10), selector, responses, frontController);
         NetworkListener networkListener = new NetworkListener(selector, responses, requestsExecutor);
         networkListener.service();
     }

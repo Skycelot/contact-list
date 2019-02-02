@@ -44,7 +44,6 @@ public class NetworkListener {
                     SocketChannel clientChannel = serverChannel.accept();
                     clientChannel.configureBlocking(false);
                     clientChannel.register(selector, SelectionKey.OP_READ);
-                    System.out.println("Got a client connection");
                 } else if (key.isReadable()) {
                     SocketChannel channel = (SocketChannel) key.channel();
                     clients.put(channel.getRemoteAddress(), channel);
@@ -58,18 +57,14 @@ public class NetworkListener {
                     String text = new String(data.toByteArray(), StandardCharsets.UTF_8);
                     if (requestsExecutor.isRequestCompleted(text)) {
                         requests.remove(channel.getRemoteAddress());
-                        requestsExecutor.requestData(channel.getRemoteAddress(), text);
-                        System.out.println("Request size: " + data.size());
-                        System.out.println("Request: " + text);
+                        requestsExecutor.queueRequest(channel.getRemoteAddress(), text);
                     } else {
                         requests.put(channel.getRemoteAddress(), data);
-                        System.out.println("Request part with size: " + readBytes);
                     }
                 } else if (key.isWritable()) {
                     SocketChannel channel = (SocketChannel) key.channel();
                     ByteBuffer responseBuffer = responses.get(channel.getRemoteAddress());
                     int writtenBytes = channel.write(responseBuffer);
-                    System.out.println("Response size: " + writtenBytes);
                     if (!responseBuffer.hasRemaining()) {
                         responses.remove(channel.getRemoteAddress());
                         channel.close();
@@ -80,7 +75,7 @@ public class NetworkListener {
 
             Response response;
             while ((response = newResponses.poll()) != null) {
-                responses.put(response.getClient(), response.getData());
+                responses.put(response.getClient(), ByteBuffer.wrap(response.getText().getBytes(StandardCharsets.UTF_8)));
                 SocketChannel channel = clients.get(response.getClient());
                 channel.register(selector, SelectionKey.OP_WRITE);
             }
