@@ -1,9 +1,6 @@
 package ru.skycelot;
 
-import ru.skycelot.controller.FrontController;
-import ru.skycelot.controller.NetworkListener;
-import ru.skycelot.controller.RequestsExecutor;
-import ru.skycelot.controller.Response;
+import ru.skycelot.controller.*;
 
 import java.io.IOException;
 import java.nio.channels.Selector;
@@ -17,7 +14,8 @@ public class Launcher {
 
         Selector selector = Selector.open();
         Queue<Response> responses = new LinkedBlockingQueue<>();
-        FrontController frontController = new FrontController();
+        PersonController personController = new PersonController();
+        FrontController frontController = new FrontController(personController);
         RequestsExecutor requestsExecutor = new RequestsExecutor(Executors.newFixedThreadPool(10), selector, responses, frontController);
         NetworkListener networkListener = new NetworkListener(selector, responses, requestsExecutor);
         networkListener.service();

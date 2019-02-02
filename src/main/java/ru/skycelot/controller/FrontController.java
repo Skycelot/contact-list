@@ -1,9 +1,14 @@
 package ru.skycelot.controller;
 
 import java.net.SocketAddress;
-import java.nio.charset.StandardCharsets;
 
 public class FrontController {
+
+    private final PersonController personController;
+
+    public FrontController(PersonController personController) {
+        this.personController = personController;
+    }
 
     public Response service(SocketAddress client, String requestData) {
         HttpRequest request = new HttpRequest();
@@ -23,13 +28,18 @@ public class FrontController {
             }
         }
 
-        String body = "<!DOCTYPE html>\r\n" +
-                "<html><head><title>Contact List</title></head><body><h1>Contact list:</h1></body></html>";
-        String text = "HTTP/1.0 200 OK\r\n" +
-                "Content-Type:text/html\n" +
-                "Content-Length:" + (body.getBytes(StandardCharsets.UTF_8).length + 1) + "\n" +
-                "\r\n";
-        return new Response(client, text + body);
+        if (request.getPath().equals("/contact-list")) {
+            if (request.getMethod().equalsIgnoreCase("GET")) {
+                String responseData = personController.getContactList();
+            }
+        } else if (request.getPath().equals("/contact-list/new")) {
+            if (request.getMethod().equalsIgnoreCase("GET")) {
+                String responseData = personController.getPersonForm();
+            } else if (request.getMethod().equalsIgnoreCase("POST")) {
+                String responseData = personController.createPerson(request.getParameters());
+            }
+        }
+        return new Response(client, requestData);
     }
 
     public boolean isRequestCompleted(String text) {
