@@ -4,42 +4,29 @@ import java.net.SocketAddress;
 
 public class FrontController {
 
+    private final HttpRequestParser httpRequestParser;
     private final PersonController personController;
 
-    public FrontController(PersonController personController) {
+    public FrontController(HttpRequestParser httpRequestParser, PersonController personController) {
+        this.httpRequestParser = httpRequestParser;
         this.personController = personController;
     }
 
     public Response service(SocketAddress client, String requestData) {
-        HttpRequest request = new HttpRequest();
-        String[] lines = requestData.split("\r\n");
-        String[] startLine = lines[0].trim().split("\\s+");
-        request.setMethod(startLine[0]);
-        request.setPath(startLine[1]);
-        if (request.getMethod().toUpperCase().equals("POST")) {
-            String[] requestParts = requestData.split("\r\n\r\n");
-            String body = requestParts[1].trim();
-            String[] pairs = body.split("&");
-            for (String pair : pairs) {
-                String[] keyValue = pair.split("=");
-                String key = keyValue[0].trim();
-                String value = keyValue[1].trim();
-                request.getParameters().put(key, value);
-            }
-        }
-
+        HttpRequest request = httpRequestParser.parse(requestData);
+        String responseData = "HTTP/1.0 400 Bad request\r\n\r\n";
         if (request.getPath().equals("/contact-list")) {
             if (request.getMethod().equalsIgnoreCase("GET")) {
-                String responseData = personController.getContactList();
+                responseData = personController.getContactList();
             }
         } else if (request.getPath().equals("/contact-list/new")) {
             if (request.getMethod().equalsIgnoreCase("GET")) {
-                String responseData = personController.getPersonForm();
+                responseData = personController.getPersonForm();
             } else if (request.getMethod().equalsIgnoreCase("POST")) {
-                String responseData = personController.createPerson(request.getParameters());
+                responseData = personController.createPerson(request.getParameters());
             }
         }
-        return new Response(client, requestData);
+        return new Response(client, responseData);
     }
 
     public boolean isRequestCompleted(String text) {

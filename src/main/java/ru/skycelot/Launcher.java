@@ -14,8 +14,9 @@ public class Launcher {
 
         Selector selector = Selector.open();
         Queue<Response> responses = new LinkedBlockingQueue<>();
+        HttpRequestParser httpRequestParser = new HttpRequestParser();
         PersonController personController = new PersonController();
-        FrontController frontController = new FrontController(personController);
+        FrontController frontController = new FrontController(httpRequestParser, personController);
         RequestsExecutor requestsExecutor = new RequestsExecutor(Executors.newFixedThreadPool(10), selector, responses, frontController);
         NetworkListener networkListener = new NetworkListener(selector, responses, requestsExecutor);
         networkListener.service();
