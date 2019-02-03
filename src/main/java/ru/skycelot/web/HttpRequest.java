@@ -1,4 +1,4 @@
-package ru.skycelot.controller;
+package ru.skycelot.web;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -27,5 +27,9 @@ public class HttpRequest {
 
     public Map<String, String> getParameters() {
         return parameters;
+    }
+
+    public static enum HttpMethod {
+        GET, POST
     }
 }

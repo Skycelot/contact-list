@@ -1,11 +1,11 @@
-package ru.skycelot.controller;
+package ru.skycelot.web;
 
 import java.util.HashMap;
 import java.util.Map;
 
-public class HttpRequestParser {
+public class HttpRequestConverter {
 
-    public HttpRequest parse(String requestData) {
+    public HttpRequest parse(byte[] requestData) {
         HttpRequest request = new HttpRequest();
         Map<String, String> headers = new HashMap<>();
         String[] lines = requestData.split("\r\n");

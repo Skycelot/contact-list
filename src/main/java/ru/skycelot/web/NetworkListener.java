@@ -1,4 +1,4 @@
-package ru.skycelot.controller;
+package ru.skycelot.web;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -14,6 +14,8 @@ import java.util.*;
 
 public class NetworkListener {
 
+    private final String bindingIp;
+    private final int port;
     private final ByteBuffer buffer = ByteBuffer.allocate(64 * 1024);
     private final Selector selector;
     private final RequestsExecutor requestsExecutor;
@@ -22,7 +24,9 @@ public class NetworkListener {
     private final Queue<Response> newResponses;
     private final Map<SocketAddress, ByteBuffer> responses = new HashMap<>();
 
-    public NetworkListener(Selector selector, Queue<Response> newResponses, RequestsExecutor requestsExecutor) {
+    public NetworkListener(String bindingIp, int port, Selector selector, Queue<Response> newResponses, RequestsExecutor requestsExecutor) {
+        this.bindingIp = bindingIp;
+        this.port = port;
         this.selector = selector;
         this.requestsExecutor = requestsExecutor;
         this.newResponses = newResponses;
@@ -32,7 +36,7 @@ public class NetworkListener {
 
         ServerSocketChannel serverChannel = ServerSocketChannel.open();
         serverChannel.configureBlocking(false);
-        serverChannel.bind(new InetSocketAddress("0.0.0.0", 8080));
+        serverChannel.bind(new InetSocketAddress(bindingIp, port));
         serverChannel.register(selector, SelectionKey.OP_ACCEPT);
         while (!Thread.interrupted()) {
             selector.select();

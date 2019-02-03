@@ -1,4 +1,4 @@
-package ru.skycelot.controller;
+package ru.skycelot.web;
 
 import java.net.SocketAddress;
 import java.nio.channels.Selector;
