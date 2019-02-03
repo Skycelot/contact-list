@@ -19,7 +19,7 @@ public class FrontController {
     public Response service(SocketAddress client, byte[] requestData) {
         HttpRequest request = httpRequestConverter.parse(requestData);
         HttpResponse response = new HttpResponse();
-        if (request.getPath().equals("/contact-list")) {
+        try {if (request.getPath().equals("/contact-list")) {
             if (request.getMethod() == HttpRequest.HttpMethod.GET) {
                 response = personController.getContactList();
             } else {
@@ -37,6 +37,10 @@ public class FrontController {
             }
         } else {
             response.setResponseCode(HttpResponse.HttpResponseCode.NOT_FOUND);
+        }} catch (Exception e) {
+            response.setResponseCode(HttpResponse.HttpResponseCode.INTERNAL_SERVER_ERROR);
+            response.getHeaders().put("Content-Type", "text/plain;charset=utf-8");
+            response.setBody(e.toString());
         }
         byte[] responseBytes = httpResponseConverter.toByteArray(response);
         return new Response(client, responseBytes);

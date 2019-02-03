@@ -45,7 +45,7 @@ public class PersonDao {
         Long id;
         try (Connection db = openConnection()) {
             String query = "INSERT INTO person (last_name, first_name, birth_date, phone_number) VALUES (?,?,?,?)";
-            try (PreparedStatement statement = db.prepareStatement(query)) {
+            try (PreparedStatement statement = db.prepareStatement(query, Statement.RETURN_GENERATED_KEYS)) {
                 statement.setString(1, person.getLastName());
                 statement.setString(2, person.getFirstName());
                 statement.setString(3, person.getBirthdate());
