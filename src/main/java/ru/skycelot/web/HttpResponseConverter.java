@@ -24,7 +24,7 @@ public class HttpResponseConverter {
         if (bodyBytes != null) {
             responseBytes = new byte[headingBytes.length + bodyBytes.length];
             System.arraycopy(headingBytes, 0, responseBytes, 0, headingBytes.length);
-            System.arraycopy(bodyBytes, 0, responseBytes, 0, bodyBytes.length);
+            System.arraycopy(bodyBytes, 0, responseBytes, headingBytes.length, bodyBytes.length);
         } else {
             responseBytes = headingBytes;
         }
