@@ -5,15 +5,15 @@ import java.util.Map;
 
 public class HttpRequest {
 
-    private String method;
+    private HttpMethod method;
     private String path;
     private final Map<String, String> parameters = new HashMap<>();
 
-    public String getMethod() {
+    public HttpMethod getMethod() {
         return method;
     }
 
-    public void setMethod(String method) {
+    public void setMethod(HttpMethod method) {
         this.method = method;
     }
 
@@ -30,6 +30,16 @@ public class HttpRequest {
     }
 
     public static enum HttpMethod {
-        GET, POST
+        GET, POST;
+
+        public static HttpMethod findByName(String name) {
+            name = name.toUpperCase();
+            for (HttpMethod method : values()) {
+                if (method.name().equals(name)) {
+                    return method;
+                }
+            }
+            return null;
+        }
     }
 }

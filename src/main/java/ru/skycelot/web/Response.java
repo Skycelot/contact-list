@@ -5,18 +5,18 @@ import java.net.SocketAddress;
 public class Response {
 
     private final SocketAddress client;
-    private final String text;
+    private final byte[] data;
 
-    public Response(SocketAddress client, String text) {
+    public Response(SocketAddress client, byte[] data) {
         this.client = client;
-        this.text = text;
+        this.data = data;
     }
 
     public SocketAddress getClient() {
         return client;
     }
 
-    public String getText() {
-        return text;
+    public byte[] getData() {
+        return data;
     }
 }

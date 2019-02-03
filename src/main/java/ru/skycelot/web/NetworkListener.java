@@ -9,7 +9,6 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
-import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 public class NetworkListener {
@@ -58,10 +57,9 @@ public class NetworkListener {
                     while (buffer.hasRemaining()) {
                         data.write(buffer.get());
                     }
-                    String text = new String(data.toByteArray(), StandardCharsets.UTF_8);
-                    if (requestsExecutor.isRequestCompleted(text)) {
+                    if (requestsExecutor.isRequestCompleted(data.toByteArray())) {
                         requests.remove(channel.getRemoteAddress());
-                        requestsExecutor.queueRequest(channel.getRemoteAddress(), text);
+                        requestsExecutor.queueRequest(channel.getRemoteAddress(), data.toByteArray());
                     } else {
                         requests.put(channel.getRemoteAddress(), data);
                     }
@@ -79,7 +77,7 @@ public class NetworkListener {
 
             Response response;
             while ((response = newResponses.poll()) != null) {
-                responses.put(response.getClient(), ByteBuffer.wrap(response.getText().getBytes(StandardCharsets.UTF_8)));
+                responses.put(response.getClient(), ByteBuffer.wrap(response.getData()));
                 SocketChannel channel = clients.get(response.getClient());
                 channel.register(selector, SelectionKey.OP_WRITE);
             }

@@ -1,18 +1,20 @@
 package ru.skycelot.web;
 
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 
 public class HttpRequestConverter {
 
-    public HttpRequest parse(byte[] requestData) {
+    public HttpRequest parse(byte[] requestBytes) {
         HttpRequest request = new HttpRequest();
         Map<String, String> headers = new HashMap<>();
+        String requestData = new String(requestBytes, StandardCharsets.UTF_8);
         String[] lines = requestData.split("\r\n");
         String[] startLine = lines[0].trim().split("\\s+");
-        request.setMethod(startLine[0]);
+        request.setMethod(HttpRequest.HttpMethod.findByName(startLine[0]));
         request.setPath(startLine[1]);
-        if (request.getMethod().toUpperCase().equals("POST")) {
+        if (request.getMethod() == HttpRequest.HttpMethod.POST) {
             String[] requestParts = requestData.split("\r\n\r\n");
             String body = requestParts[1].trim();
             String[] pairs = body.split("&");

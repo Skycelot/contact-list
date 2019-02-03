@@ -20,7 +20,7 @@ public class RequestsExecutor {
         this.frontController = frontController;
     }
 
-    public void queueRequest(SocketAddress client, String data) {
+    public void queueRequest(SocketAddress client, byte[] data) {
         new CompletableFuture<>().
                 supplyAsync(() -> frontController.service(client, data)
                         , executor).
@@ -31,7 +31,7 @@ public class RequestsExecutor {
                 );
     }
 
-    public boolean isRequestCompleted(String text) {
-        return frontController.isRequestCompleted(text);
+    public boolean isRequestCompleted(byte[] data) {
+        return frontController.isRequestCompleted(data);
     }
 }
