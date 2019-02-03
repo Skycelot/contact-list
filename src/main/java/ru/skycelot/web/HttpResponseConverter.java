@@ -18,6 +18,7 @@ public class HttpResponseConverter {
         response.getHeaders().entrySet().stream().
                 map(entry -> entry.getKey() + ": " + entry.getValue() + NEW_LINE).
                 forEach(header -> heading.append(header));
+        heading.append(NEW_LINE);
         byte[] headingBytes = heading.toString().getBytes(StandardCharsets.UTF_8);
         byte[] responseBytes;
         if (bodyBytes != null) {
