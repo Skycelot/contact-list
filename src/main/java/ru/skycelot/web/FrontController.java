@@ -46,7 +46,7 @@ public class FrontController {
         return new Response(client, responseBytes);
     }
 
-    public boolean isRequestCompleted(byte[] text) {
-        return true;
+    public boolean isRequestCompleted(byte[] data) {
+        return httpRequestConverter.isRequestCompleted(data);
     }
 }

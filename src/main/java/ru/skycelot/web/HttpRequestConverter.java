@@ -3,8 +3,12 @@ package ru.skycelot.web;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class HttpRequestConverter {
+
+    private static final Pattern CONTENT_LENGTH_VALUE = Pattern.compile("Content-Length:\\s*(\\d+)\\s+");
 
     public HttpRequest parse(byte[] requestBytes) {
         HttpRequest request = new HttpRequest();
@@ -28,7 +32,23 @@ public class HttpRequestConverter {
         return request;
     }
 
-    public boolean isRequestCompleted(String text) {
-        return true;
+    public boolean isRequestCompleted(byte[] data) {
+        boolean completed = false;
+        String text = new String(data, StandardCharsets.UTF_8);
+        if (text.contains("\r\n\r\n")) {
+            Matcher textMatcher = CONTENT_LENGTH_VALUE.matcher(text);
+            int contentLength;
+            if (textMatcher.find()) {
+                String contentLengthText = textMatcher.group(1);
+                contentLength = Integer.parseInt(contentLengthText);
+                String[] requestParts = text.split("\r\n\r\n");
+                String body = requestParts[1];
+                int bodyLength = body.getBytes(StandardCharsets.UTF_8).length;
+                completed = contentLength == bodyLength;
+            } else {
+                completed = true;
+            }
+        }
+        return completed;
     }
 }
