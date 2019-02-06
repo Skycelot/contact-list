@@ -123,6 +123,11 @@ public class NetworkListener {
             Client client = clientIterator.next().getValue();
             if (!client.isRequestCompleted() &&
                     Instant.now().toEpochMilli() - client.getConnectedOn().toEpochMilli() > 30000) {
+                try {
+                    client.getConnection().close();
+                } catch (Exception e) {
+                    System.out.println("Close socket exception: " + e);
+                }
                 clientIterator.remove();
             }
         }
