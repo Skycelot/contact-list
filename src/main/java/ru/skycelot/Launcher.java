@@ -17,12 +17,11 @@ public class Launcher {
 
         Selector selector = Selector.open();
         Queue<Response> responses = new LinkedBlockingQueue<>();
-        HttpRequestConverter httpRequestConverter = new HttpRequestConverter();
-        HttpResponseConverter httpResponseConverter = new HttpResponseConverter();
+        HttpRequestResponseConverter httpRequestResponseConverter = new HttpRequestResponseConverter();
         PersonDao personDao = new PersonDao("jdbc:h2:file:/home/mbrunmaier/var/contact-list", "user", "password");
         PersonService personService = new PersonService(personDao);
         PersonController personController = new PersonController(personService);
-        FrontController frontController = new FrontController(httpRequestConverter, httpResponseConverter, personController);
+        FrontController frontController = new FrontController(httpRequestResponseConverter, personController);
         RequestsExecutor requestsExecutor = new RequestsExecutor(Executors.newFixedThreadPool(10), selector, responses, frontController);
         NetworkListener networkListener = new NetworkListener("0.0.0.0", 8080, selector, responses, requestsExecutor);
         networkListener.service();

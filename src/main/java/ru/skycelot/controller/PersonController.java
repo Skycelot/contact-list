@@ -21,6 +21,7 @@ public class PersonController {
         response.setResponseCode(HttpResponse.HttpResponseCode.OK);
         response.getHeaders().put("Content-Type", "text/html;charset=utf-8");
         StringBuilder body = new StringBuilder("<!DOCTYPE html>\r\n<html><head><title>Contact List</title></head><body><h1>Contact list:</h1>");
+        body.append("<a href=\"/contact-list/new\">New person</a>");
         body.append("<table><tr><th>Last Name</th><th>First Name</th><th>Birth Date</th><th>Phone Number</th></tr>");
         for (Person person: people) {
             body.append("<tr><td>").append(person.getLastName());

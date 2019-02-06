@@ -5,10 +5,8 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
-import java.nio.channels.SelectionKey;
-import java.nio.channels.Selector;
-import java.nio.channels.ServerSocketChannel;
-import java.nio.channels.SocketChannel;
+import java.nio.channels.*;
+import java.time.Instant;
 import java.util.*;
 
 public class NetworkListener {
@@ -18,10 +16,8 @@ public class NetworkListener {
     private final ByteBuffer buffer = ByteBuffer.allocate(64 * 1024);
     private final Selector selector;
     private final RequestsExecutor requestsExecutor;
-    private final Map<SocketAddress, SocketChannel> clients = new HashMap<>();
-    private final Map<SocketAddress, ByteArrayOutputStream> requests = new HashMap<>();
+    private final Map<SocketAddress, Client> clients = new LinkedHashMap<>();
     private final Queue<Response> newResponses;
-    private final Map<SocketAddress, ByteBuffer> responses = new HashMap<>();
 
     public NetworkListener(String bindingIp, int port, Selector selector, Queue<Response> newResponses, RequestsExecutor requestsExecutor) {
         this.bindingIp = bindingIp;
@@ -37,50 +33,107 @@ public class NetworkListener {
         serverChannel.configureBlocking(false);
         serverChannel.bind(new InetSocketAddress(bindingIp, port));
         serverChannel.register(selector, SelectionKey.OP_ACCEPT);
-        while (!Thread.interrupted()) {
-            selector.select();
+        while (true) {
+            selector.select(1000);
+            if (Thread.interrupted()) break;
             Set<SelectionKey> keys = selector.selectedKeys();
             Iterator<SelectionKey> keysIterator = keys.iterator();
             while (keysIterator.hasNext()) {
                 SelectionKey key = keysIterator.next();
                 if (key.isAcceptable()) {
-                    SocketChannel clientChannel = serverChannel.accept();
-                    clientChannel.configureBlocking(false);
-                    clientChannel.register(selector, SelectionKey.OP_READ);
+                    acceptSocket(serverChannel);
                 } else if (key.isReadable()) {
-                    SocketChannel channel = (SocketChannel) key.channel();
-                    clients.put(channel.getRemoteAddress(), channel);
-                    buffer.clear();
-                    int readBytes = channel.read(buffer);
-                    buffer.flip();
-                    ByteArrayOutputStream data = requests.computeIfAbsent(channel.getRemoteAddress(), (address) -> new ByteArrayOutputStream());
-                    while (buffer.hasRemaining()) {
-                        data.write(buffer.get());
-                    }
-                    if (requestsExecutor.isRequestCompleted(data.toByteArray())) {
-                        requests.remove(channel.getRemoteAddress());
-                        requestsExecutor.queueRequest(channel.getRemoteAddress(), data.toByteArray());
-                    } else {
-                        requests.put(channel.getRemoteAddress(), data);
-                    }
+                    readFromSocket(key);
                 } else if (key.isWritable()) {
-                    SocketChannel channel = (SocketChannel) key.channel();
-                    ByteBuffer responseBuffer = responses.get(channel.getRemoteAddress());
-                    int writtenBytes = channel.write(responseBuffer);
-                    if (!responseBuffer.hasRemaining()) {
-                        responses.remove(channel.getRemoteAddress());
-                        channel.close();
-                    }
+                    writeToSocket(key);
                 }
                 keysIterator.remove();
             }
+            checkOldConnections();
+            addResponses();
+        }
+    }
 
-            Response response;
-            while ((response = newResponses.poll()) != null) {
-                responses.put(response.getClient(), ByteBuffer.wrap(response.getData()));
-                SocketChannel channel = clients.get(response.getClient());
-                channel.register(selector, SelectionKey.OP_WRITE);
+    private void acceptSocket(ServerSocketChannel serverChannel) {
+        try {
+            SocketChannel clientChannel = serverChannel.accept();
+            clientChannel.configureBlocking(false);
+            clientChannel.register(selector, SelectionKey.OP_READ);
+        } catch (Exception e) {
+            System.out.println("Accept socket exception: " + e);
+        }
+    }
+
+    private void readFromSocket(SelectionKey key) {
+        try {
+            SocketChannel channel = (SocketChannel) key.channel();
+            Client client = clients.computeIfAbsent(channel.getRemoteAddress(), (address) -> new Client(
+                    channel, Instant.now(), new ByteArrayOutputStream()
+            ));
+            if (!client.isRequestCompleted()) {
+                int readBytes;
+                do {
+                    readBytes = channel.read(buffer);
+                    buffer.flip();
+                    while (buffer.hasRemaining()) {
+                        client.getRequest().write(buffer.get());
+                    }
+                    buffer.clear();
+                } while (readBytes == buffer.capacity());
+                byte[] request = client.getRequest().toByteArray();
+                if (requestsExecutor.isRequestCompleted(request)) {
+                    client.inputCompleted();
+                    channel.shutdownInput();
+                    requestsExecutor.queueRequest(channel.getRemoteAddress(), request);
+                }
             }
+        } catch (Exception e) {
+            System.out.println("Read socket exception: " + e);
+        }
+    }
+
+    private void writeToSocket(SelectionKey key) {
+        SocketChannel channel = null;
+        Client client = null;
+        try {
+            channel = (SocketChannel) key.channel();
+            client = clients.get(channel.getRemoteAddress());
+            channel.write(client.getResponse());
+            if (!client.getResponse().hasRemaining()) {
+                clients.remove(channel.getRemoteAddress());
+                channel.close();
+            }
+        } catch (Exception e) {
+            System.out.println("Write socket exception: " + e);
+            if (client != null) {
+                clients.remove(client);
+            }
+            if (channel != null) {
+                try {
+                    channel.close();
+                } catch (IOException e1) {
+                }
+            }
+        }
+    }
+
+    private void checkOldConnections() {
+        Iterator<Map.Entry<SocketAddress, Client>> clientIterator = clients.entrySet().iterator();
+        while (clientIterator.hasNext()) {
+            Client client = clientIterator.next().getValue();
+            if (!client.isRequestCompleted() &&
+                    Instant.now().toEpochMilli() - client.getConnectedOn().toEpochMilli() > 30000) {
+                clientIterator.remove();
+            }
+        }
+    }
+
+    private void addResponses() throws ClosedChannelException {
+        Response response;
+        while ((response = newResponses.poll()) != null) {
+            Client client = clients.get(response.getClient());
+            client.setResponse(ByteBuffer.wrap(response.getData()));
+            client.getConnection().register(selector, SelectionKey.OP_WRITE);
         }
     }
 }
