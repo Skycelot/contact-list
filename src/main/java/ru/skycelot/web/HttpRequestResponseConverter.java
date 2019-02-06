@@ -35,6 +35,7 @@ public class HttpRequestResponseConverter {
     }
 
     public boolean isRequestCompleted(byte[] data) {
+        if (data.length > 1024 * 1024) return true;
         boolean completed = false;
         String text = new String(data, StandardCharsets.UTF_8);
         if (text.contains(BODY_DELIMITER)) {
